@@ -1,0 +1,25 @@
+{
+  "bitwise":false,
+  "forin":true,
+  "noarg":true,
+  "noempty":true,
+  "eqeqeq":true,
+  "strict":true,
+  "undef":true,
+  "curly":true,
+  "browser":true,
+  "indent":2,
+  "maxerr":50,
+  "onevar":true,
+  "plusplus":false,
+  "newcap":true,
+  "immed": true,
+  "latedef": true,
+  "sub": true,
+  "boss": true,
+  "eqnull": true,
+  "trailing": true,
+  "globals": {
+    "jQuery": true
+  }
+}

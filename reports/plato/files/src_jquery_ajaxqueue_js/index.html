@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title></title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap-3.0.0-wip.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="brand" href="http://github.com/jsoverson/plato">Plato on Github</a>
+    <ul class="nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/jquery.ajaxqueue.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="span6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"></i></a></h2>
+      <p class="stat">63.32</p>
+    </div>
+    <div class="span6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC"></i></h2>
+      <p class="stat">228</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="span6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="span6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="span6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty"></i></a></h2>
+      <p class="stat">61.40</p>
+    </div>
+    <div class="span6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs"></i></a></h2>
+      <p class="stat">1.81</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="span6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="span6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="span12">(function ($, undefined) {
+  &quot;use strict&quot;;
+  var _ajax,
+      _queues = {},
+      _keys,
+      _objectType,
+      Queue;
+
+  Queue = (function(){
+    function Queue(name){
+      var version = false;
+
+      this.name = name;
+      this.requests = [];
+      this.running = false;
+
+      this.version = function(v){
+        if(typeof v !== &#039;undefined&#039;){
+          version = v;
+          resetRequests(this);
+          return this;
+        }
+        return version;
+      };
+      //find a better way to update version internally
+      this.incrementVersion = function(v){
+        if(typeof v !== &#039;undefined&#039;){
+          version = v;
+        }
+        if(v === false){
+          resetRequests(this);
+        }
+        return this;
+      };
+    }
+    function resetRequests(qu){
+      qu.requests.length = 0;
+      if(qu.running){
+        qu.running.abort();
+      }
+    }
+    Queue.findOrCreateByName = function(name, version){
+      var newQ;
+      if(typeof _queues[name] === &#039;undefined&#039;){
+        newQ = new Queue(name);
+        newQ.version(version);
+        _queues[name] = newQ;
+      } else {
+        newQ = _queues[name];
+      }
+      return newQ;
+    };
+    Queue.destroyAllByName = function(){
+      //pending..
+    };
+    Queue.prototype.destroy = function(){
+      resetRequests(this);
+      return $.queueajax(&#039;destroy&#039;, this.name);
+    };
+    Queue.prototype.push = function(options){
+      this.requests.push(options);
+      if (!this.running) {
+        this.next();
+      }
+      return this;
+    };
+    Queue.prototype.next = function(){
+      var toProcess,
+          that = this,
+          ver = {};
+
+      if(this.requests.length === 0){
+        this.running = false;
+        return;
+      }
+      toProcess = this.requests.shift();
+
+      //extract to fn -&gt; queue.mergeVersionWith(toProcess))
+      if(this.version() !== false){
+        ver = { data: &#039;&#039; };
+        if ($.isArray(toProcess.data)) {
+          //array
+          ver.data = toProcess.data.concat({ name: &#039;version&#039;, value: this.version() });
+        } else {
+          //hash
+          ver.data = $.extend({}, toProcess.data, { version: this.version() });
+        }
+      }
+
+      //Creating a new hash. In the event this hash gets used somewhere outside this scope, don&#039;t want to unexpectedly mutate it..
+      this.running = $.ajax(
+        $.extend({}, toProcess, ver, {
+          complete: function(jqXHR, textStatus){
+            var json = {};
+
+            //internal parseJson
+            if(jqXHR.aborted !== true){
+              try {
+                json = $.parseJSON(jqXHR.responseText);//assumes json data for now..
+              } catch(e){ }
+              if(json === null){ //for safety, not sure if it&#039;s better to make version undefined or false and reset everything..
+                json = {};
+              }
+            }
+
+            if(json.version === false &amp;&amp; $.isFunction(toProcess[&#039;rejected&#039;])){
+              toProcess[&#039;rejected&#039;].call(this, json);
+            }
+            if($.isFunction(toProcess[&#039;complete&#039;])){
+              toProcess[&#039;complete&#039;].apply(this, arguments);
+            }
+
+            //update version internally to response&#039;s version - slightly different than the regular .version() .. dam
+            that.incrementVersion(json.version);//passing in false if rejected
+            that.next();
+          }
+        })
+      );
+    };
+
+    return Queue;
+  })();
+
+  _keys = Object.keys || function(obj) {
+    var keys = [], key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        keys.push(key);
+      }
+    }
+    return keys;
+  };
+
+  _objectType = function(obj){
+    var type = Object.prototype.toString.call(obj).toLowerCase();
+    switch(type){
+    case &#039;[object array]&#039;:
+      return &#039;array&#039;;
+    case &#039;[object object]&#039;:
+      return &#039;object&#039;;
+    default:
+      return false;
+    }
+  };
+
+  $.queueajax = function( method ) {
+    var methods,name,version;
+
+    methods = {
+      queues : function(){
+        return _queues;
+      },
+      destroy : function( keyspace ){
+        //Jumping through hoops because we want to make sure all references pointing to the queue obj in memory are updated
+        //Doing a simple queues = {} does not update the actual object in memory, just our _queue pointer
+        //so the references returned from the queues method could potentially have &quot;stale data&quot;
+        var queuesList = _keys(_queues),
+            i, len,
+            prefix, wildCard, prefixLength,
+            numDeleted = 0;
+
+        if(typeof keyspace === &#039;string&#039;){
+          prefix = keyspace;
+          wildCard = prefix.lastIndexOf(&quot;*&quot;);
+          if(wildCard &gt; -1){
+            prefixLength = wildCard;
+            prefix = prefix.slice(0, wildCard);
+          } else {
+            prefixLength = keyspace.length;
+          }
+        }
+
+        for(i=0, len=queuesList.length; i &lt; len; i++){
+          if(typeof prefix === &#039;undefined&#039;){
+            //destroy all
+            delete _queues[ queuesList[i] ];
+            numDeleted++;
+          } else if(wildCard &gt; -1){
+            //wild card match
+            if(queuesList[i].slice(0, wildCard) === prefix){
+              delete _queues[ queuesList[i] ];
+              numDeleted++;
+            }
+          } else if(queuesList[i] === prefix) {
+            //exact match
+            delete _queues[ queuesList[i] ];
+            numDeleted++;
+            break;//yay! we&#039;re done because hashes
+          }
+        }
+        return numDeleted;
+      }
+    };
+
+    if (typeof methods[method] !== &#039;undefined&#039;){
+      //$.queueajax(&#039;queues&#039;) -&gt; return all queues
+      //$.queueajax(&#039;destroy&#039;) -&gt; destroy all
+      //$.queueajax(&#039;destroy&#039;, &#039;queue*&#039;) -&gt; detroy all with specific key or namespace
+      return methods[ method ].apply(methods, Array.prototype.slice.call( arguments, 1 ));
+    } else if (typeof method === &#039;string&#039;){
+      //$.queueajax(&#039;monkey&#039;) -&gt; creates a queue
+      return Queue.findOrCreateByName(method);
+    } else if (_objectType(method) === &#039;object&#039;) {
+      //$.queueajax({ ... ajaxstuff ... })
+      if(typeof method[&#039;queue&#039;] === &#039;undefined&#039;){
+        throw new TypeError(&#039;Expected $.queueajax to contain queue property&#039;);
+      }
+      name = method[&#039;queue&#039;];
+      version = method[&#039;version&#039;];
+      delete method[&#039;queue&#039;];
+      delete method[&#039;version&#039;];
+      return Queue.findOrCreateByName(name, version).push(method);
+    } else {
+      throw new TypeError(&#039;$.queueajax did not detect a valid signature&#039;);
+    }
+  };
+
+  $.queuegetJSON = function( url, params ) {
+    if(typeof url === &#039;string&#039; &amp;&amp; _objectType(params) === &#039;object&#039;){
+      if(typeof params[&#039;queue&#039;] === &#039;undefined&#039;){
+        throw new TypeError(&#039;Expected $.queuegetJSON to contain queue property&#039;);
+      }
+      return $.queueajax( $.extend({}, { type:&#039;GET&#039;, dataType:&#039;json&#039;, url:url }, params) );
+    }
+    throw new TypeError(&#039;$.queuegetJSON did not detect a valid signature&#039;);
+  };
+
+})(jQuery);</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
