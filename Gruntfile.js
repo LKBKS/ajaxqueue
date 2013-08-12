@@ -3,10 +3,10 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     uglify: {
       options: {
-        banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n'
+        banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> v<%= pkg.version %>*/\n'
       },
       dist: {
-        src: 'src/<%= pkg.name %>.js',
+        src: 'src/jquery.ajaxqueue.js',
         dest: 'build/<%= pkg.name %>.<%= pkg.version %>.min.js'
       }
     },
