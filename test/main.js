@@ -733,6 +733,7 @@ describe('ajaxQueue', function(){
         //is it possible for this to happen without the user calling q.next() manually?
         //should we be worried about this?
         it('should not initialize another ajax call if one is running for the same queue')
+        it('should call the afterAll callback when the entire queue is completed')
       });
     });
 
